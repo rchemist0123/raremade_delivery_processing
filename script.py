@@ -94,7 +94,7 @@ if file2 is not None:
 if dt1_new is not None and dt2_new is not None:
     st.subheader("Step 2. 발송처리 데이터 다운로드", divider=True)
     dt_final = dt1_new.join(
-        dt2_new,
+        dt2_new2,
         on=["받는분", "address"],
         how="left",
     )
