@@ -16,6 +16,7 @@ st.header("레어메이드 발송처리 프로그램📦")
 
 dt1_new = None
 dt2_new = None
+target = None
 st.subheader("Step 1. 데이터 업로드", divider=True)
 file1 = st.file_uploader(
     "주문 데이터", type=["xlsx"], help="스마트스토어에서 받은 파일을 업로드하세요."
@@ -25,10 +26,7 @@ file2 = st.file_uploader(
     type=["xlsx"],
     help="택배사 송장 파일을 업로드하세요.",
 )
-if file2 is not None:
-    target = st.segmented_control(
-        "발송처리 대상", options=["전체", "집화완료"], default="집화완료"
-    )
+
 if file1 is not None:
     try:
         password = "1111"
@@ -42,12 +40,12 @@ if file1 is not None:
             decrypted_workbook.getvalue()
         )  # or decrypted_stream.getbuffer().nbytes
 
-        if stream_size == 0:
-            st.error(
-                "Decrypted stream is empty. The password might be incorrect or the file decryption failed to produce data."
-            )
-        else:
-            st.toast(f"암호화된 파일 불러오기 성공!", icon="✅")
+        # if stream_size == 0:
+        #     st.error(
+        #         "Decrypted stream is empty. The password might be incorrect or the file decryption failed to produce data."
+        #     )
+        # else:
+        #     st.toast(f"암호화된 파일 불러오기 성공!", icon="✅")
         # Try reading with pandas, explicitly stating the engine for clarity
         dt1 = pl.read_excel(
             decrypted_workbook,
@@ -81,23 +79,31 @@ if file2 is not None:
         dt2_new = (
             dt2.group_by("받는분").agg(pl.all().first()).rename({"주소_1": "address"})
         )
-        dt2_new2 = dt2_new.filter(pl.col("예약상태") == "집화완료")
         st.info(
-            f"배송 데이터 업로드 완료! 집화완료 건수: 총 {dt2_new.height}건 중 {dt2_new2.height}건",
+            f"배송 데이터 업로드 완료! 집화완료 건수: 총 {dt2_new.height}건 중 {dt2_new.height}건",
             icon="ℹ️",
         )
-
     except Exception as e:
         st.warning("올바른 배송 데이터가 아닙니다!", icon="⚠️")
 
-
-if dt1_new is not None and dt2_new is not None:
-    st.subheader("Step 2. 발송처리 데이터 다운로드", divider=True)
-    dt_final = dt1_new.join(
-        dt2_new2,
-        on=["받는분", "address"],
-        how="left",
+if file2 is not None:
+    target = st.segmented_control(
+        "발송처리 대상을 선택하세요!", options=["전체", "집화완료"], default="집화완료"
     )
+if dt1_new is not None and dt2_new is not None and target is not None:
+    st.subheader("Step 2. 발송처리 데이터 다운로드", divider=True)
+    if target == "전체":
+        dt_final = dt1_new.join(
+            dt2_new,
+            on=["받는분", "address"],
+            how="left",
+        )
+    elif target == "집화완료":
+        dt_final = dt1_new.join(
+            dt2_new.filter(pl.col("예약상태") == "집화완료"),
+            on=["받는분", "address"],
+            how="left",
+        )
     # print(dt_final.columns)
     dt_final = (
         dt_final.with_columns(pl.lit("CJ대한통운").alias("택배사"))
@@ -106,7 +112,7 @@ if dt1_new is not None and dt2_new is not None:
         .filter(pl.col("송장번호").is_not_null())
         .select(pl.exclude(["받는분", "address"]))
     )
-    st.info(f"발송처리 건수: {dt_final.height}건", icon="ℹ️")
+    st.toast(f"발송처리 건수: {dt_final.height}건", icon="ℹ️")
     # st.toggle(label="집화 완료만 처리")
     filename = f"{datetime.today().strftime('%Y%m%d')}_delivery_process.xls"
     sheet_name = "발송처리"
