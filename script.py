@@ -10,10 +10,6 @@ from datetime import datetime
 
 st.header("레어메이드 발송처리 프로그램📦")
 
-
-# with st.sidebar:
-
-
 dt1_new = None
 dt2_new = None
 target = None
@@ -31,6 +27,7 @@ if file1 is not None:
     try:
         password = "1111"
         decrypted_workbook = io.BytesIO()
+
         # Decryption
         file = msoffcrypto.OfficeFile(file1)
         file.load_key(password=password)
@@ -40,13 +37,6 @@ if file1 is not None:
             decrypted_workbook.getvalue()
         )  # or decrypted_stream.getbuffer().nbytes
 
-        # if stream_size == 0:
-        #     st.error(
-        #         "Decrypted stream is empty. The password might be incorrect or the file decryption failed to produce data."
-        #     )
-        # else:
-        #     st.toast(f"암호화된 파일 불러오기 성공!", icon="✅")
-        # Try reading with pandas, explicitly stating the engine for clarity
         dt1 = pl.read_excel(
             decrypted_workbook,
             engine="calamine",
@@ -86,37 +76,55 @@ if file2 is not None:
     except Exception as e:
         st.warning("올바른 배송 데이터가 아닙니다!", icon="⚠️")
 
-if file2 is not None:
-    target = st.segmented_control(
-        "발송처리 대상을 선택하세요!", options=["전체", "집화완료"], default="집화완료"
-    )
-if dt1_new is not None and dt2_new is not None and target is not None:
+# if file2 is not None:
+#     target = st.segmented_control(
+#         "발송처리 대상을 선택하세요!", options=["전체", "집화완료"], default="집화완료"
+#     )
+if dt1_new is not None and dt2_new is not None:
     st.subheader("Step 2. 발송처리 데이터 다운로드", divider=True)
-    if target == "전체":
-        dt_final = dt1_new.join(
-            dt2_new,
-            on=["받는분", "address"],
-            how="left",
-        )
-    elif target == "집화완료":
-        dt_final = dt1_new.join(
-            dt2_new.filter(pl.col("예약상태") == "집화완료"),
-            on=["받는분", "address"],
-            how="left",
-        )
+
+    # 집화지시 있는 경우 제외하기.
+    exclude_person_name = dt2_new.filter(pl.col("예약상태") != "집화완료")[
+        "받는분"
+    ].to_list()
+    if len(exclude_person_name) > 0:
+        exclude_info = f"집화지시 대상: 총 {len(exclude_person_name)}명, ({','.join(exclude_person_name)})"
+    else:
+        exclude_info = f"집화지시 대상: 총 {len(exclude_person_name)}명"
+
+    st.toast(
+        exclude_info,
+        icon="ℹ️",
+    )
+    dt2_new = dt2_new.filter(~pl.col("받는분").is_in(exclude_person_name))
+    # if target == "전체":
+    #     dt_final = dt1_new.join(
+    #         dt2_new,
+    #         on=["받는분", "address"],
+    #         how="left",
+    #     )
+    # elif target == "집화완료":
     # print(dt_final.columns)
+    dt_final = dt1_new.join(
+        dt2_new.filter(pl.col("예약상태") == "집화완료"),
+        on=["받는분", "address"],
+        how="left",
+    )
     dt_final = (
         dt_final.with_columns(pl.lit("CJ대한통운").alias("택배사"))
         .rename({"delivery_num": "송장번호"})
         .select(["받는분", "address", "상품주문번호", "배송방법", "택배사", "송장번호"])
         .filter(pl.col("송장번호").is_not_null())
-        .select(pl.exclude(["받는분", "address"]))
     )
     st.toast(f"발송처리 건수: {dt_final.height}건", icon="ℹ️")
-    # st.toggle(label="집화 완료만 처리")
+
+    st.dataframe(dt_final)
+
     filename = f"{datetime.today().strftime('%Y%m%d')}_delivery_process.xls"
     sheet_name = "발송처리"
     try:
+
+        dt_final = dt_final.select(pl.exclude(["받는분", "address"]))
         workbook = xlwt.Workbook(encoding="utf-8")  # 인코딩 지정 (필요에 따라)
         worksheet = workbook.add_sheet(sheet_name)
 
@@ -126,8 +134,6 @@ if dt1_new is not None and dt2_new is not None and target is not None:
             worksheet.write(0, col_idx, header_name)
 
         # 데이터 행 작성
-        # dt_final이 Pandas DataFrame이라고 가정합니다.
-        # 만약 Polars DataFrame이라면 dt_final.to_pandas().values.tolist()를 사용하세요.
         for row_idx, row_data in enumerate(
             dt_final.to_pandas().values.tolist(), start=1
         ):
@@ -159,9 +165,3 @@ if dt1_new is not None and dt2_new is not None and target is not None:
     except Exception as e:
         st.error(f"파일 생성 중 오류가 발생했습니다: {e}")
         st.error(f"오류 타입: {type(e).__name__}")
-
-    # if download_data:
-    # try:
-
-    # except Exception as e:
-    #     st.error(f"Error using direct xlwt: {e}")
