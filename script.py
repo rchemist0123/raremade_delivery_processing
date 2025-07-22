@@ -4,9 +4,19 @@ import polars as pl
 import msoffcrypto
 import xlwt
 import io
-
-# import xlwt
+import requests
+import os
+from dotenv import load_dotenv
+from functions import get_token, delivery_proceed
 from datetime import datetime
+
+load_dotenv()
+
+clientId = os.getenv("clientId")
+clientSecret = os.getenv("clientSecret")
+
+token = get_token(client_id=clientId, client_secret=clientSecret)
+
 
 st.header("레어메이드 발송처리 프로그램📦")
 
@@ -120,10 +130,15 @@ if dt1_new is not None and dt2_new is not None:
 
     st.dataframe(dt_final)
 
+    # 발송 처리 API 호출
+    if st.button("발송 처리하기", type="primary"):
+        result = delivery_proceed(dt_final, token)
+        print(result)
+
+    # Data Download
     filename = f"{datetime.today().strftime('%Y%m%d')}_delivery_process.xls"
     sheet_name = "발송처리"
     try:
-
         dt_final = dt_final.select(pl.exclude(["받는분", "address"]))
         workbook = xlwt.Workbook(encoding="utf-8")  # 인코딩 지정 (필요에 따라)
         worksheet = workbook.add_sheet(sheet_name)
