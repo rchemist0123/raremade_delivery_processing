@@ -126,14 +126,15 @@ if dt1_new is not None and dt2_new is not None:
         .select(["받는분", "address", "상품주문번호", "배송방법", "택배사", "송장번호"])
         .filter(pl.col("송장번호").is_not_null())
     )
-    st.toast(f"발송처리 건수: {dt_final.height}건", icon="ℹ️")
+    st.toast(f"발송처리 대상 건수: {dt_final.height}건", icon="ℹ️")
 
     st.dataframe(dt_final)
 
     # 발송 처리 API 호출
     if st.button("발송 처리하기", type="primary"):
         result = delivery_proceed(dt_final, token)
-        print(result)
+        if result:
+            st.toast(f"발송처리 완료!: {dt_final.height}건", icon="ℹ️")
 
     # Data Download
     filename = f"{datetime.today().strftime('%Y%m%d')}_delivery_process.xls"
