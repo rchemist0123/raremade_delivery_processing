@@ -71,16 +71,18 @@ def delivery_proceed(data, token):
     # print(data_as_params)
     batch_size = 30
     for i in range(0, len(data_as_params), batch_size):
+
         data_as_params_batch = data_as_params[i : i + batch_size]
-        print(
-            f"상품명{i+1}번부터 {i+batch_size if i+batch_size <= len(data_as_params) else len(data_as_params)}번 발송 처리 진행 중."
-        )
+        # print(
+        #     f"상품명{i+1}번부터 {i+batch_size if i+batch_size <= len(data_as_params) else len(data_as_params)}번 발송 처리 진행 중."
+        # )
         try:
             params = {"dispatchProductOrders": data_as_params_batch}
             res = requests.post(url, headers=headers, json=params)
             if res:
                 res_data = res.json()
                 data = res_data["data"]
+                print(res_data)
             else:
                 print(f"API 실패: {res.json()}")
                 continue
