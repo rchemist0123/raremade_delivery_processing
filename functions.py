@@ -73,9 +73,9 @@ def delivery_proceed(data, token):
     for i in range(0, len(data_as_params), batch_size):
 
         data_as_params_batch = data_as_params[i : i + batch_size]
-        # print(
-        #     f"상품명{i+1}번부터 {i+batch_size if i+batch_size <= len(data_as_params) else len(data_as_params)}번 발송 처리 진행 중."
-        # )
+        print(
+            f"상품명{i+1}번부터 {i+batch_size if i+batch_size <= len(data_as_params) else len(data_as_params)}번 발송 처리 진행 중."
+        )
         try:
             params = {"dispatchProductOrders": data_as_params_batch}
             res = requests.post(url, headers=headers, json=params)
