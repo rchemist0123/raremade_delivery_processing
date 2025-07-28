@@ -153,9 +153,9 @@ if "data" in st.session_state:
 
         result = delivery_proceed(dt_final2, token)
 
-        if result:
+        if result == "success":
             st.success(f"발송처리 완료!: {dt_final2.height}건", icon="✅")
-        else:
+        elif result == "fail":
             st.error("예상치 못한 문제가 발생하였습니다!", icon="🚨")
 
     # Data Download

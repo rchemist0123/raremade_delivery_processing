@@ -68,10 +68,10 @@ def delivery_proceed(data, token):
         )
         .to_dicts()
     )
-    # print(data_as_params)
+    print("발송처리를 시작합니다.")
     batch_size = 30
     for i in range(0, len(data_as_params), batch_size):
-
+        status = ""
         data_as_params_batch = data_as_params[i : i + batch_size]
         print(
             f"상품명{i+1}번부터 {i+batch_size if i+batch_size <= len(data_as_params) else len(data_as_params)}번 발송 처리 진행 중."
@@ -79,15 +79,21 @@ def delivery_proceed(data, token):
         try:
             params = {"dispatchProductOrders": data_as_params_batch}
             res = requests.post(url, headers=headers, json=params)
-            if res:
-                res_data = res.json()
-                data = res_data["data"]
-                print(res_data)
-            else:
-                print(f"API 실패: {res.json()}")
-                continue
+            res_data = res.json()
+            success_data = res_data["data"]["successProductOrderIds"]
+            if len(success_data) > 0:
+                print(f"발송처리 완료 건:{len(success_data)}")
+                status = "success"
+            elif len(success_data) == 0:
+                print(
+                    f"발송처리 실패: {res_data['data']['failProductOrderInfos'][0]['message']}"
+                )
+                status = "fail"
+                break
+
         except requests.exceptions.RequestException as e:
             print(e)
             return None
-    print(f"{len(data_as_params)}개 상품 발송 처리 완료!")
-    return True
+
+        print(f"{len(data_as_params)}개 상품 발송 처리 완료!")
+    return status
