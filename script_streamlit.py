@@ -27,6 +27,7 @@ st.subheader("Step 1. 데이터 업로드", divider=True)
 file1 = st.file_uploader(
     "주문 데이터", type=["xlsx"], help="스마트스토어에서 받은 파일을 업로드하세요."
 )
+
 file2 = st.file_uploader(
     "배송 데이터",
     type=["xlsx"],
@@ -51,6 +52,7 @@ if file1 is not None:
             decrypted_workbook,
             engine="calamine",
             sheet_name="발주발송관리",
+            columns=["상품주문번호", "수취인명", "기본배송지", "배송방법"],
             read_options={"header_row": 1},
         )
     except Exception as e:
@@ -73,7 +75,9 @@ if file1 is not None:
 
 if file2 is not None:
     try:
-        dt2 = pl.read_excel(file2)
+        dt2 = pl.read_excel(
+            file2, columns=["받는분", "주소_1", "운송장번호", "예약상태"]
+        )
         dt2 = dt2.rename({"운송장번호": "delivery_num"})
         # st.write(dt2)
         dt2_new = (
